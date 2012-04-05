@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Google AuthSub API Testing</title>
+
+<meta name="viewport" content="initial-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<link rel="stylesheet" href="css/jquery.mobile-1.1.0-rc.1.css?n=1" />
+<link rel="shortcut icon" href="css/images/google_box_blue.png" />
+<link rel="apple-touch-icon" href="css/images/google_box_blue.png" />	
+
+<script src="js/jquery-1.7.1.min.js"></script>
+<script src="js/jquery.mobile-1.1.0-rc.1.min.js"></script>
+
+	
+<script type="text/javascript">
+
+///////////////////////////////////////////////////////
+// Function to retrieve variables from the Querystring
+///////////////////////////////////////////////////////
+function getParameterByName(name)
+{
+  name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+  var regexS = "[\\?&]" + name + "=([^&#]*)";
+  var regex = new RegExp(regexS);
+  var results = regex.exec(window.location.search);
+  if(results == null)
+    return "";
+  else
+    return decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+
+var sessionToken = "";
+
+	$(function() {
+	
+		///////////////////////////////////////////////////////////////////////////
+		//Step 1: Retrieve the login token from the URL when returning from Google:
+		///////////////////////////////////////////////////////////////////////////
+		var t = getParameterByName("token");
+		if (t.length > 0) {
+			$('#tokens').append('<li>Step 1: Login Token: ' + t + '</li>');
+			$('#tokens').listview("refresh");
+		}
+		
+
+		////////////////////////////////////////////////////
+		//Step 2: Get a new session token:
+		////////////////////////////////////////////////////
+		$("#Session").bind("click", function() {
+		
+			var stockURL = "php/AuthSubSessionToken.php?token=";
+
+			$.get(stockURL + t, function(data){
+				sessionToken = data.substring( data.indexOf("=")+1 );
+				$('#tokens').append('<li>Step 2: Session Token: ' + sessionToken + '</li>');
+				$('#tokens').listview("refresh");
+			});
+		
+		});
+		
+
+		////////////////////////////////////////////////////
+		//Step 3: Validate the session token is good:
+		////////////////////////////////////////////////////
+		$("#CheckSession").bind("click", function() {
+		
+			var checkURL = "php/AuthSubTokenInfo.php?token=";
+
+			$.get(checkURL + sessionToken, function(data){
+				$('#tokens').append('<li>Step 3: Check Session Token: ' + data + '</li>');
+				$('#tokens').listview("refresh");
+			});
+		
+		}); //click		
+
+
+		
+		////////////////////////////////////////////////////
+		//Step 4: Retrieve Google Finance Portfolio Data:
+		////////////////////////////////////////////////////
+		$("#GetPortData").bind("click", function() {
+		
+			var checkURL = "php/GetPortfolioData.php?token=";
+
+			$.getJSON(checkURL + sessionToken, function(data){
+				$('#tokens').append('<li>Step 4: Get Portfolio Data: ' + data.feed.entry + '</li>');
+				$('#tokens').listview("refresh");
+				console.log(data.feed.entry);
+			});		
+
+		}); //click		
+		
+
+		////////////////////////////////////////////////////
+		//Step 5: Logout of Google:
+		////////////////////////////////////////////////////
+		$("#Logout").bind("click", function() {
+		
+			var checkURL = "php/AuthSubRevokeToken.php";
+			
+			//The Google Revoke call just sends back a status so 
+			//we will use an AJAX call instead of the getJSON call:
+		 	$.ajax({
+	          url: checkURL,
+	          data: {token: sessionToken},
+	          type: "POST",
+	          async: false,
+	          success: function(return_data) {
+	              
+	              $.mobile.changePage("#logoutpage", { role: "dialog", transition: "pop" });
+	          },
+	          error: function(XMLHttpRequest, textStatus, errorThrown) {
+	             alert('fail');
+	          },
+	          complete: function(data) {
+	          }
+	      });
+		
+		}); //click		
+								
+	
+	
+	}); //END: document.ready
+
+</script>
+</head>
+
+	<body>
+
+		<div data-role="page" id="home" data-theme="b">
+
+			<div data-role="header" data-theme="a"><h1>Google AuthSub API test area</h1></div>
+			<div data-role="content">
+				
+				<div data-role="controlgroup">
+					<a href="https://www.google.com/accounts/AuthSubRequest?next=http%3A%2F%2Fderekdg.com%2FGoogle-AuthSub-API%2Findex.html&scope=http%3A%2F%2Ffinance.google.com%2Ffinance%2Ffeeds%2F&session=1&secure=0" data-role="button" data-theme="d" id="login">Step 1: Login</a>
+					<a href="#" data-role="button" data-theme="d" id="Session">Step 2: Get Session</a>
+					<a href="#" data-role="button" data-theme="d" id="CheckSession">Step 3: Check Session</a>
+					<a href="#" data-role="button" data-theme="d" id="GetPortData">Step 4: Get Portfolio Data</a>
+					<a href="#" data-role="button" data-theme="d" id="Logout">Step 5: Logout</a>
+				</div>
+				
+						
+				<ul id="tokens" data-role="listview" data-inset="true" data-theme="d"></ul>
+				
+			
+			</div> <!-- content -->
+
+		</div> <!-- page -->
+		
+	<!-- ----------- -->
+	<!-- LOGOUT page -->
+	<!-- ----------- -->
+	<div data-role="page" id="logoutpage" data-theme="b">
+
+		<div data-role="header" data-theme="a"><h1>Logout</h1></div>
+
+		<div data-role="content">
+			<p>You have been logged out of Google.</p>
+			<a href="http://derekdg.com/Google-AuthSub-API/" data-role="button" data-theme="a" data-inline="true" data-mini="true">OK</a>
+		</div>
+
+	</div>		
+
+	</body>
+	</html>
